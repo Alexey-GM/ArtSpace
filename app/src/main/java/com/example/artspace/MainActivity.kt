@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -54,16 +57,43 @@ class MainActivity : ComponentActivity() {
 fun ArtSpaceApp(modifier: Modifier = Modifier) {
     val arts by remember { mutableStateOf(Data.arts) }
     var currentArt by remember { mutableIntStateOf(0) }
+    var accumulatedDrag by remember { mutableFloatStateOf(0f) }
     Column(
         modifier = modifier
             .padding(horizontal = 32.dp, vertical = 12.dp)
             .verticalScroll(rememberScrollState())
-            .safeDrawingPadding(),
+            .safeDrawingPadding()
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { _, dragAmount ->
+                        // Накопление значения свайпа
+                        accumulatedDrag += dragAmount
+                    },
+                    onDragEnd = {
+                        // Обработка завершения свайпа
+                        if (accumulatedDrag < -50) {
+                            // Свайп влево (отрицательное значение) - переход к следующему объекту
+                            if (currentArt < arts.lastIndex) {
+                                currentArt++
+                            }
+                        } else if (accumulatedDrag > 50) {
+                            // Свайп вправо (положительное значение) - переход к предыдущему объекту
+                            if (currentArt > 0) {
+                                currentArt--
+                            }
+                        }
+                        // Сброс накопленного значения после завершения свайпа
+                        accumulatedDrag = 0f
+                    }
+                )
+            }
     ) {
         Column(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth().weight(3f)
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(3f)
         ) {
             ArtSection(
                 image = painterResource(arts[currentArt].id)
